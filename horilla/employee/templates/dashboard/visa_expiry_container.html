@@ -1,0 +1,41 @@
+{% load i18n %}
+{% load static %}
+
+{% if visa_expiries %}
+    <div class="oh-card-dashboard oh-card-dashboard--no-scale oh-card-dashboard--transparent mt-3">
+        <div class="oh-card-dashboard__header oh-card-dashboard__header--divider">
+            <span class="oh-card-dashboard__title">{% trans "Visa Expiry" %}</span>
+        </div>
+        <div class="oh-card-dashboard__body">
+            <ul class="oh-card-dashboard__user-list">
+                {% for visa_expiry in visa_expiries %}
+                <li class="oh-card-dashboard__user-item">
+                    <div class="oh-profile oh-profile--md">
+                        <div class="oh-profile__avatar mr-1">
+                            <img src="{{visa_expiry.profile}}" class="oh-profile__image" alt="{{visa_expiry.name}}" />
+                        </div>
+                        <div>
+                            <span class="oh-profile__name oh-text--dark">{{visa_expiry.name}}</span>
+                            <span class="oh-text--xsmall">{{visa_expiry.visa_expiry_date}} - {{visa_expiry.daysUntilExpiry}}</span>
+                        </div>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+{% else %}
+    <div class="oh-card-dashboard oh-card-dashboard--no-scale oh-card-dashboard--transparent mt-3">
+        <div class="oh-card-dashboard__header oh-card-dashboard__header--divider">
+            <span class="oh-card-dashboard__title">{% trans "Visa Expiry" %}</span>
+        </div>
+        <div class="oh-card-dashboard__body">
+            <div class="oh-empty" style="padding: 20px;">
+                <img src="{% static 'images/ui/search.svg' %}" class="oh-404__image" alt="No visa expiry" style="max-width: 100px; margin: 20px auto;" />
+                <h6 class="oh-empty__title">{% trans "No Visa Expiring" %}</h6>
+                <p class="oh-empty__subtitle">{% trans "No one's visa is expiring this month." %}</p>
+            </div>
+        </div>
+    </div>
+{% endif %}
+

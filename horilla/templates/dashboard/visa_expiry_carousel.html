@@ -1,0 +1,30 @@
+{% load i18n %}
+{% if visa_expiries %}
+<div class="oh-dashboard__events w-100">
+    <div class="oh-dashbaord__events-reel w-100" id="visaExpiryContainer" style="transform: translateX(0%);">
+        {% for visa_expiry in visa_expiries %}
+            <div class="oh-dashboard__event" style="background-color: rgb(230, 126, 34);">
+                <div class="oh-dasboard__event-photo">
+                    <img onload="autoSlider()" src="{{visa_expiry.profile}}"
+                        style="width: 100%;height: 100%;object-fit: cover;">
+                </div>
+                <div class="oh-dasboard__event-details">
+                    <span class="oh-dashboard__event-title">{% trans "Visa Expiry" %}</span>
+                    <span class="oh-dashboard__event-main">{{visa_expiry.name}}</span>
+                    <span class="oh-dashboard__event-date">{{visa_expiry.visa_expiry_date}}, {{visa_expiry.daysUntilExpiry}}</span>
+                    <span class="oh-dashboard__event-date"
+                        style="font-size:10px;">{{visa_expiry.job_position}}{% if visa_expiry.job_position and visa_expiry.department %}, {% endif %}{{visa_expiry.department}}</span>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+    <ul class="oh-dashboard__events-nav" id="visaExpiryDots">
+        {% for visa_expiry in visa_expiries %}
+            <li onclick="moveSlider(event)"
+                class="oh-dashboard__events-nav-item {% if forloop.first %}oh-dashboard__events-nav-item--active{% endif %}"
+                data-target="{{ forloop.counter0 }}">
+            </li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
