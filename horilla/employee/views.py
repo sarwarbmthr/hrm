@@ -2797,6 +2797,17 @@ def visa_expiry():
 
 
 @login_required
+@enter_if_accessible(feature="visa_expiry_view", perm="employee.view_employee")
+def visa_expiry_list(request):
+    """
+    Render a full listing page of employees whose visa expires within next 30 days.
+    """
+    employees = visa_expiry()
+    # Use Employee.get_email() method which prefers work info email
+    return render(request, "employee/visa_expiry_list.html", {"employees": employees})
+
+
+@login_required
 @enter_if_accessible(feature="birthday_view", perm="employee.view_employee")
 def get_employees_birthday(request):
     """
@@ -2811,6 +2822,7 @@ def get_employees_birthday(request):
                 if hasattr(emp, "get_avatar")
                 else f"{default_avatar_url}{emp.employee_first_name}+{emp.employee_last_name}"
             ),
+            "id": emp.id,
             "name": f"{emp.employee_first_name} {emp.employee_last_name}",
             "dob": emp.dob.strftime("%d %b"),
             "daysUntilBirthday": (
