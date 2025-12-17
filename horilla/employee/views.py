@@ -38,7 +38,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.translation import gettext as __
 from django.utils.translation import gettext_lazy as _
-from django.views.decorators.http import require_http_methods
+from django.views.decorators.http import require_http_methods, require_POST
 
 from accessibility.decorators import enter_if_accessible
 from accessibility.methods import update_employee_accessibility_cache
@@ -2805,6 +2805,54 @@ def visa_expiry_list(request):
     employees = visa_expiry()
     # Use Employee.get_email() method which prefers work info email
     return render(request, "employee/visa_expiry_list.html", {"employees": employees})
+
+
+@login_required
+@require_POST
+def visa_action(request, emp_id):
+    """AJAX endpoint to mark visa actions: 'mark-called', 'mark-done', or 'remove'.
+    Stores flags in Employee.additional_info JSONField so no DB migration is required.
+    """
+    try:
+        emp = Employee.objects.filter(id=emp_id).first()
+        if not emp:
+            return JsonResponse({"error": "Employee not found"}, status=404)
+
+        # parse JSON body if provided
+        data = {}
+        if request.content_type == "application/json":
+            try:
+                data = json.loads(request.body.decode("utf-8") or "{}")
+            except Exception:
+                data = {}
+        else:
+            data = request.POST
+
+        action = data.get("action")
+        if not action:
+            return JsonResponse({"error": "No action provided"}, status=400)
+
+        info = emp.additional_info or {}
+
+        now_iso = timezone.now().isoformat()
+        if action in ("mark-called", "called"):
+            info["visa_called"] = True
+            info["visa_called_at"] = now_iso
+        elif action in ("mark-done", "done"):
+            info["visa_done"] = True
+            info["visa_done_at"] = now_iso
+        elif action == "remove":
+            info["visa_removed"] = True
+            info["visa_removed_at"] = now_iso
+        else:
+            return JsonResponse({"error": "Unknown action"}, status=400)
+
+        emp.additional_info = info
+        emp.save(update_fields=["additional_info"])
+
+        return JsonResponse({"status": "ok", "action": action})
+    except Exception as exc:
+        return JsonResponse({"error": str(exc)}, status=500)
 
 
 @login_required

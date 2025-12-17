@@ -119,7 +119,16 @@ from recruitment.models import (
     StageFiles,
     StageNote,
 )
-from recruitment.views.linkedin import delete_post, post_recruitment_in_linkedin
+try:
+    # Optional LinkedIn integration
+    from recruitment.views.linkedin import delete_post, post_recruitment_in_linkedin  # type: ignore
+except Exception:
+    # Provide safe fallbacks when linkedin integration is not available
+    def delete_post(recruitment_obj):
+        return False
+
+    def post_recruitment_in_linkedin(recruitment_obj, account=None):
+        return None
 from recruitment.views.paginator_qry import paginator_qry
 
 

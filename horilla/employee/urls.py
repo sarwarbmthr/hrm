@@ -177,6 +177,7 @@ urlpatterns = [
     path("get-birthday", views.get_employees_birthday, name="get-birthday"),
     path("get-visa-expiry", views.get_employees_visa_expiry, name="get-visa-expiry"),
     path("visa-expiry-list", views.visa_expiry_list, name="visa-expiry-list"),
+    path("visa-action/<int:emp_id>/", views.visa_action, name="visa-action"),
     path("dashboard", views.dashboard, name="dashboard"),
     path(
         "total-employees-count",

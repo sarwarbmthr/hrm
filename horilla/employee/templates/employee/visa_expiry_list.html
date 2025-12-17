@@ -1,0 +1,137 @@
+{% extends 'index.html' %}
+{% load i18n %}
+
+{% block content %}
+<section class="oh-wrapper">
+  <div class="oh-card">
+    <div class="oh-card__header d-flex justify-content-between align-items-center">
+      <h2 class="oh-card__title mb-0">{% trans "Employees with Visa Expiring Soon" %}</h2>
+      <div>
+        <button class="oh-btn oh-btn--secondary" onclick="location.reload()">{% trans "Refresh" %}</button>
+      </div>
+    </div>
+    <div class="oh-card__body">
+      {% if employees and employees|length > 0 %}
+      <div class="table-responsive oh-sticky-table">
+        <table class="table table-hover table-striped">
+          <thead>
+            <tr>
+              <th style="width:40%">{% trans "Employee" %}</th>
+              <th style="width:18%">{% trans "Contact" %}</th>
+              <th style="width:15%">{% trans "Visa Expiry" %}</th>
+              <th style="width:12%">{% trans "Days Left" %}</th>
+              <th style="width:15%">{% trans "Actions" %}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for emp in employees %}
+              <tr data-employee-id="{{ emp.id }}">
+                <td>
+                  <div class="d-flex align-items-center">
+                    <div class="me-3">
+                      {% if emp.employee_profile %}
+                        <img src="{{ emp.employee_profile.url }}" alt="{{ emp.get_full_name }}" class="rounded-circle" style="width:48px;height:48px;object-fit:cover">
+                      {% else %}
+                        <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center" style="width:48px;height:48px">{{ emp.employee_first_name|slice:":1" }}</div>
+                      {% endif %}
+                    </div>
+                    <div>
+                      <div class="fw-bold">{% if emp.get_full_name %}{{ emp.get_full_name }}{% else %}{{ emp.employee_first_name }} {{ emp.employee_last_name }}{% endif %}</div>
+                      <div class="text-muted">{% if emp.employee_work_info %}{{ emp.employee_work_info.job_position_id }}{% endif %}</div>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <div>{{ emp.phone|default:"—" }}</div>
+                  <div class="text-muted small">{% if emp.get_email %}{{ emp.get_email }}{% else %}—{% endif %}</div>
+                </td>
+                <td>
+                  {% if emp.visa_expire_date %}
+                    <div>{{ emp.visa_expire_date|date:"d M, Y" }}</div>
+                  {% else %}
+                    &mdash;
+                  {% endif %}
+                </td>
+                <td>
+                  {% if emp.days_until_visa_expiry is not None %}
+                    {% if emp.days_until_visa_expiry <= 0 %}
+                      <span class="oh-badge oh-badge--danger">{% trans "Expired" %}</span>
+                    {% elif emp.days_until_visa_expiry <= 7 %}
+                      <span class="oh-badge oh-badge--danger">{{ emp.days_until_visa_expiry }} {% trans "days" %}</span>
+                    {% else %}
+                      <span class="oh-badge oh-badge--primary">{{ emp.days_until_visa_expiry }} {% trans "days" %}</span>
+                    {% endif %}
+                  {% else %}
+                    &mdash;
+                  {% endif %}
+                </td>
+                <td>
+                  <div class="d-flex gap-2">
+                    <button type="button" class="oh-btn oh-btn--light-bkg" data-action="mark-called" data-employee-id="{{ emp.id }}">{% trans "Mark as Called" %}</button>
+                    <button type="button" class="oh-btn oh-btn--secondary" data-action="mark-done" data-employee-id="{{ emp.id }}">{% trans "Done" %}</button>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+        <div class="oh-empty">
+          <p>{% trans "No employees with upcoming visa expiry." %}</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+<script>
+  function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+  }
+
+  async function postAction(empId, action) {
+    const url = `/employee/visa-action/${empId}/`;
+    const csrftoken = getCookie('csrftoken');
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrftoken || ''
+        },
+        body: JSON.stringify({ action: action })
+      });
+      return await res.json();
+    } catch (err) {
+      return { error: err.message };
+    }
+  }
+
+  document.addEventListener('click', async function(e) {
+    var btn = e.target.closest('button[data-action]');
+    if (!btn) return;
+    var action = btn.getAttribute('data-action');
+    var empId = btn.getAttribute('data-employee-id');
+    btn.disabled = true;
+    const originalText = btn.innerText;
+    btn.innerText = '...';
+    const result = await postAction(empId, action);
+    if (result && result.status === 'ok') {
+      if (action === 'mark-called') btn.innerText = '{% trans "Called" %}';
+      else if (action === 'mark-done') btn.innerText = '{% trans "Done" %}';
+      if (action === 'mark-done') {
+        var row = document.querySelector('tr[data-employee-id="' + empId + '"]');
+        if (row) row.style.opacity = 0.6;
+      }
+    } else {
+      btn.disabled = false;
+      btn.innerText = originalText;
+      alert(result && result.error ? result.error : 'Action failed');
+    }
+  });
+</script>
+
+{% endblock %}

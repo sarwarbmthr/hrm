@@ -19,3 +19,9 @@ class EmployeeConfig(AppConfig):
 
     default_auto_field = "django.db.models.BigAutoField"
     name = "employee"
+    def ready(self):
+        # import signal handlers
+        try:
+            from . import signals  # noqa: F401
+        except Exception:
+            pass

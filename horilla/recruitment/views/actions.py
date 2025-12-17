@@ -29,7 +29,13 @@ from recruitment.decorators import (
 from recruitment.filters import StageFilter
 from recruitment.forms import StageCreationForm
 from recruitment.models import Candidate, Recruitment, Stage, StageNote
-from recruitment.views.linkedin import delete_post
+try:
+    # Optional LinkedIn integration - may not be present in all deployments
+    from recruitment.views.linkedin import delete_post  # type: ignore
+except Exception:
+    # Fallback if linkedin module is missing: provide a no-op delete_post
+    def delete_post(recruitment_obj):
+        return False
 from recruitment.views.paginator_qry import paginator_qry
 
 

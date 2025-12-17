@@ -1,0 +1,354 @@
+{% extends 'index.html' %}
+{% load i18n %}
+
+{% block content %}
+<style>
+  * {
+    box-sizing: border-box;
+  }
+
+  .visa-container {
+    max-width: 1150px;
+    margin: auto;
+    padding: 20px;
+  }
+
+  .visa-header {
+    background: #ffffff;
+    padding: 18px 22px;
+    border-radius: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04);
+    margin-bottom: 18px;
+  }
+
+  .visa-header h2 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+  }
+
+  .visa-header p {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: #6b7280;
+  }
+
+  .visa-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .visa-badge {
+    background-color: #2563eb;
+    color: #ffffff;
+    padding: 7px 14px;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .visa-btn-refresh {
+    background-color: #ef4444;
+    color: #ffffff;
+    text-decoration: none;
+    padding: 7px 14px;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 500;
+    border: none;
+    cursor: pointer;
+  }
+
+  .visa-btn-refresh:hover {
+    background-color: #dc2626;
+  }
+
+  .visa-table-wrapper {
+    background: #ffffff;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  }
+
+  .visa-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .visa-table thead {
+    background: linear-gradient(90deg, #1e40af, #1d4ed8);
+  }
+
+  .visa-table thead th {
+    color: #ffffff;
+    padding: 13px 14px;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: left;
+  }
+
+  .visa-table tbody td {
+    padding: 13px 14px;
+    font-size: 14px;
+    border-bottom: 1px solid #e5e7eb;
+    vertical-align: middle;
+  }
+
+  .visa-table tbody tr:hover {
+    background-color: #f9fafb;
+  }
+
+  .visa-link {
+    color: #2563eb;
+    font-weight: 500;
+    cursor: pointer;
+  }
+
+  .visa-link:hover {
+    text-decoration: underline;
+  }
+
+  .visa-phone, .visa-email {
+    color: #2563eb;
+    text-decoration: none;
+  }
+
+  .visa-phone:hover, .visa-email:hover {
+    text-decoration: underline;
+  }
+
+  .visa-days {
+    padding: 5px 12px;
+    border-radius: 14px;
+    font-size: 12px;
+    font-weight: 600;
+    display: inline-block;
+  }
+
+  .visa-days.green {
+    background-color: #dcfce7;
+    color: #15803d;
+  }
+
+  .visa-days.orange {
+    background-color: #ffedd5;
+    color: #c2410c;
+  }
+
+  .visa-days.red {
+    background-color: #fee2e2;
+    color: #b91c1c;
+  }
+
+  .visa-btn-action {
+    background-color: #e5e7eb;
+    border: none;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    margin-right: 6px;
+  }
+
+  .visa-btn-action:hover {
+    background-color: #d1d5db;
+  }
+
+  .visa-btn-action:disabled {
+    background-color: #d1d5db;
+    cursor: not-allowed;
+    opacity: 0.6;
+  }
+
+  .visa-btn-remove {
+    background-color: #fee2e2 !important;
+    color: #b91c1c !important;
+  }
+
+  .visa-btn-remove:hover {
+    background-color: #fecaca !important;
+  }
+
+  .visa-tip {
+    margin-top: 14px;
+    padding: 12px 14px;
+    background-color: #f0f9ff;
+    border-left: 4px solid #3b82f6;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #374151;
+  }
+
+  .visa-empty {
+    text-align: center;
+    padding: 40px 20px;
+    color: #6b7280;
+  }
+</style>
+
+<div class="visa-container">
+
+  <div class="visa-header">
+    <div>
+      <h2>{% trans "Employees with Visa Expiring Soon" %}</h2>
+      <p>{% trans "Track and manage employee visa expiry dates" %}</p>
+    </div>
+    <div class="visa-header-actions">
+      <span class="visa-badge">{{ employees|length }} {% trans "Employee(s)" %}</span>
+      <button class="visa-btn-refresh" onclick="location.reload()">{% trans "Refresh" %}</button>
+    </div>
+  </div>
+
+  <div class="visa-table-wrapper">
+    {% if employees and employees|length > 0 %}
+      <table class="visa-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>{% trans "Employee Name" %}</th>
+            <th>{% trans "Phone" %}</th>
+            <th>{% trans "Email" %}</th>
+            <th>{% trans "Visa Expiry Date" %}</th>
+            <th>{% trans "Days Left" %}</th>
+            <th>{% trans "Actions" %}</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for emp in employees %}
+            <tr data-employee-id="{{ emp.id }}">
+              <td>{{ forloop.counter }}</td>
+              <td class="visa-link">
+                {% if emp.get_full_name %}
+                  {{ emp.get_full_name }}
+                {% else %}
+                  {{ emp.employee_first_name }} {{ emp.employee_last_name }}
+                {% endif %}
+              </td>
+              <td>
+                <a href="tel:{{ emp.phone }}" class="visa-phone">{{ emp.phone|default:"—" }}</a>
+              </td>
+              <td>
+                <a href="mailto:{% if emp.get_email %}{{ emp.get_email }}{% else %}{{ emp.email }}{% endif %}" class="visa-email">
+                  {% if emp.get_email %}{{ emp.get_email }}{% else %}{{ emp.email }}{% endif %}
+                </a>
+              </td>
+              <td>
+                {% if emp.visa_expire_date %}
+                  {{ emp.visa_expire_date|date:"d M Y" }}
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+              <td>
+                {% if emp.days_until_visa_expiry is not None %}
+                  {% if emp.days_until_visa_expiry <= 0 %}
+                    <span class="visa-days red">{% trans "Expired" %}</span>
+                  {% elif emp.days_until_visa_expiry <= 7 %}
+                    <span class="visa-days orange">{{ emp.days_until_visa_expiry }} {% trans "days" %}</span>
+                  {% else %}
+                    <span class="visa-days green">{{ emp.days_until_visa_expiry }} {% trans "days" %}</span>
+                  {% endif %}
+                {% else %}
+                  —
+                {% endif %}
+              </td>
+              <td>
+                <button type="button" class="visa-btn-action visa-btn-call" data-action="mark-called" data-employee-id="{{ emp.id }}">📞 {% trans "Called" %}</button>
+                <button type="button" class="visa-btn-action visa-btn-check" data-action="mark-done" data-employee-id="{{ emp.id }}">✔ {% trans "Done" %}</button>
+                <button type="button" class="visa-btn-action visa-btn-remove" data-action="remove" data-employee-id="{{ emp.id }}">🗑️ {% trans "Remove" %}</button>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    {% else %}
+      <div class="visa-empty">
+        <p>{% trans "No visa expiries in the next 30 days" %}</p>
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="visa-tip">
+    💡 {% trans "Tip: Click on employee name to view profile, phone to call, or email to send a message." %}
+  </div>
+
+</div>
+
+<script>
+  // Helper to read CSRF token from cookie
+  function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+  }
+
+  async function postAction(empId, action) {
+    const url = `/employee/visa-action/${empId}/`;
+    const csrftoken = getCookie('csrftoken');
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrftoken || ''
+        },
+        body: JSON.stringify({ action: action })
+      });
+      return await res.json();
+    } catch (err) {
+      return { error: err.message };
+    }
+  }
+
+  document.addEventListener('click', async function(e) {
+    var btn = e.target.closest('button[data-action]');
+    if (!btn) return;
+    var action = btn.getAttribute('data-action');
+    var empId = btn.getAttribute('data-employee-id');
+
+    // Handle remove action with confirmation dialog
+    if (action === 'remove') {
+      var row = document.querySelector('tr[data-employee-id="' + empId + '"]');
+      var empName = row ? row.cells[1].innerText : 'Unknown';
+      const confirmed = confirm('Are you sure you want to remove the employee - ' + empName + ' from the visa expiring list as their visa got upgraded?');
+      if (!confirmed) return;
+    }
+
+    btn.disabled = true;
+    const originalText = btn.innerText;
+    btn.innerText = '...';
+    const result = await postAction(empId, action);
+    if (result && result.status === 'ok') {
+      if (action === 'mark-called') {
+        btn.innerText = '✔ Called';
+        btn.style.backgroundColor = '#10b981';
+        btn.style.color = '#ffffff';
+      } else if (action === 'mark-done') {
+        btn.innerText = '✔ Done';
+        btn.style.backgroundColor = '#10b981';
+        btn.style.color = '#ffffff';
+        var row = document.querySelector('tr[data-employee-id="' + empId + '"]');
+        if (row) row.style.opacity = 0.5;
+      }
+      // Remove row for remove action
+      if (action === 'remove') {
+        var row = document.querySelector('tr[data-employee-id="' + empId + '"]');
+        if (row) {
+          row.style.transition = 'opacity 0.3s ease';
+          row.style.opacity = '0';
+          setTimeout(() => row.remove(), 300);
+        }
+      }
+    } else {
+      btn.disabled = false;
+      btn.innerText = originalText;
+      alert(result && result.error ? result.error : 'Action failed');
+    }
+  });
+</script>
+
+{% endblock %}
