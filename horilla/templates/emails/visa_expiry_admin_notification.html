@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visa Expiry Notification</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f4f7;
+            margin: 0;
+            padding: 0;
+        }
+        .email-container {
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        .email-header {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: #ffffff;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        .email-header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        .email-body {
+            padding: 30px 25px;
+            color: #333333;
+        }
+        .email-body p {
+            font-size: 15px;
+            line-height: 1.6;
+            margin: 10px 0;
+        }
+        .employee-info {
+            background-color: #f8f9fa;
+            border-left: 4px solid #e74c3c;
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .employee-info h3 {
+            margin: 0 0 10px 0;
+            font-size: 18px;
+            color: #e74c3c;
+        }
+        .info-row {
+            margin: 8px 0;
+            font-size: 14px;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #555555;
+            display: inline-block;
+            width: 140px;
+        }
+        .info-value {
+            color: #333333;
+        }
+        .alert-box {
+            background-color: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 4px;
+            padding: 15px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .alert-box strong {
+            color: #856404;
+            font-size: 16px;
+        }
+        .action-button {
+            display: inline-block;
+            background-color: #e74c3c;
+            color: #ffffff;
+            text-decoration: none;
+            padding: 12px 25px;
+            border-radius: 5px;
+            font-weight: 600;
+            margin-top: 20px;
+            text-align: center;
+        }
+        .action-button:hover {
+            background-color: #c0392b;
+        }
+        .email-footer {
+            background-color: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            font-size: 13px;
+            color: #6c757d;
+            border-top: 1px solid #e9ecef;
+        }
+        .footer-text {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="email-header">
+            <h1>⚠️ Visa Expiry Alert</h1>
+        </div>
+        <div class="email-body">
+            <p>Dear HR Admin,</p>
+            <p>This is an important notification regarding an employee whose visa is expiring soon.</p>
+            
+            {% for employee in employees %}
+            <div class="employee-info">
+                <h3>Employee Details</h3>
+                <div class="info-row">
+                    <span class="info-label">Name:</span>
+                    <span class="info-value">{{ employee.get_full_name }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Employee ID:</span>
+                    <span class="info-value">{{ employee.badge_id|default:"N/A" }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Email:</span>
+                    <span class="info-value">{{ employee.email }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Phone:</span>
+                    <span class="info-value">{{ employee.phone|default:"N/A" }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Department:</span>
+                    <span class="info-value">
+                        {% if employee.get_department %}
+                            {{ employee.get_department.department }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Visa Expiry Date:</span>
+                    <span class="info-value">{{ employee.visa_expire_date|date:"d M Y" }}</span>
+                </div>
+            </div>
+            
+            <div class="alert-box">
+                <strong>⏰ Days Until Expiry: {{ days }} day{{ days|pluralize }}</strong>
+            </div>
+            {% endfor %}
+            
+            <p>Please take immediate action to:</p>
+            <ul>
+                <li>Contact the employee regarding visa renewal</li>
+                <li>Initiate necessary documentation procedures</li>
+                <li>Follow up with relevant authorities</li>
+                <li>Update the visa status once renewed</li>
+            </ul>
+            
+            <p style="margin-top: 25px;">
+                <strong>Important:</strong> Ensure all necessary steps are taken well before the expiry date to avoid any legal or operational issues.
+            </p>
+        </div>
+        <div class="email-footer">
+            <p class="footer-text">This is an automated notification from Horilla HRM System</p>
+            <p class="footer-text">Please do not reply to this email</p>
+            <p class="footer-text">&copy; {{ "now"|date:"Y" }} Horilla. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

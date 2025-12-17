@@ -178,6 +178,8 @@ urlpatterns = [
     path("get-visa-expiry", views.get_employees_visa_expiry, name="get-visa-expiry"),
     path("visa-expiry-list", views.visa_expiry_list, name="visa-expiry-list"),
     path("visa-action/<int:emp_id>/", views.visa_action, name="visa-action"),
+    path("company-license-edit", views.company_license_edit, name="company-license-edit"),
+    path("company-license-status", views.company_license_status, name="company-license-status"),
     path("dashboard", views.dashboard, name="dashboard"),
     path(
         "total-employees-count",

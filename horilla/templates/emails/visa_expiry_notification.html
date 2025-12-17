@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Visa Expiry Reminder</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f4f4f7;
+            margin: 0;
+            padding: 0;
+        }
+        .email-container {
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        .email-header {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: #ffffff;
+            padding: 30px 20px;
+            text-align: center;
+        }
+        .email-header h1 {
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        .email-body {
+            padding: 30px 25px;
+            color: #333333;
+        }
+        .email-body p {
+            font-size: 15px;
+            line-height: 1.6;
+            margin: 10px 0;
+        }
+        .greeting {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 15px;
+        }
+        .info-box {
+            background-color: #e8f4fd;
+            border-left: 4px solid #3498db;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .info-row {
+            margin: 10px 0;
+            font-size: 15px;
+        }
+        .info-label {
+            font-weight: 600;
+            color: #2c3e50;
+            display: inline-block;
+            width: 180px;
+        }
+        .info-value {
+            color: #34495e;
+            font-weight: 500;
+        }
+        .alert-box {
+            background-color: #fff3cd;
+            border: 2px solid #ffc107;
+            border-radius: 6px;
+            padding: 20px;
+            margin: 25px 0;
+            text-align: center;
+        }
+        .alert-box .icon {
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+        .alert-box strong {
+            color: #856404;
+            font-size: 18px;
+            display: block;
+            margin-top: 10px;
+        }
+        .action-list {
+            background-color: #f8f9fa;
+            border-radius: 6px;
+            padding: 20px 25px;
+            margin: 20px 0;
+        }
+        .action-list h3 {
+            margin: 0 0 15px 0;
+            color: #2c3e50;
+            font-size: 16px;
+        }
+        .action-list ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .action-list li {
+            margin: 8px 0;
+            color: #555555;
+            font-size: 14px;
+        }
+        .important-note {
+            background-color: #ffe5e5;
+            border-left: 4px solid #e74c3c;
+            padding: 15px 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .important-note strong {
+            color: #c0392b;
+            font-size: 15px;
+        }
+        .contact-info {
+            background-color: #e8f8f5;
+            border-radius: 6px;
+            padding: 15px 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+        .contact-info p {
+            margin: 5px 0;
+            font-size: 14px;
+            color: #27ae60;
+        }
+        .email-footer {
+            background-color: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            font-size: 13px;
+            color: #6c757d;
+            border-top: 1px solid #e9ecef;
+        }
+        .footer-text {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="email-header">
+            <h1>📋 Visa Expiry Reminder</h1>
+        </div>
+        <div class="email-body">
+            <p class="greeting">Dear {{ employee.get_full_name }},</p>
+            
+            <p>We hope this email finds you well. This is an important reminder regarding your visa status.</p>
+            
+            <div class="info-box">
+                <div class="info-row">
+                    <span class="info-label">Your Name:</span>
+                    <span class="info-value">{{ employee.get_full_name }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Employee ID:</span>
+                    <span class="info-value">{{ employee.badge_id|default:"N/A" }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Department:</span>
+                    <span class="info-value">
+                        {% if employee.get_department %}
+                            {{ employee.get_department.department }}
+                        {% else %}
+                            N/A
+                        {% endif %}
+                    </span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Current Visa Expiry Date:</span>
+                    <span class="info-value">{{ employee.visa_expire_date|date:"d M Y" }}</span>
+                </div>
+            </div>
+            
+            <div class="alert-box">
+                <div class="icon">⏰</div>
+                <strong>Your visa will expire in {{ days }} day{{ days|pluralize }}</strong>
+                <p style="margin: 10px 0 0 0; color: #856404;">Please take immediate action!</p>
+            </div>
+            
+            <div class="action-list">
+                <h3>📌 Action Required:</h3>
+                <ul>
+                    <li>Contact HR department immediately if you haven't already</li>
+                    <li>Gather all necessary documents for visa renewal</li>
+                    <li>Submit your application well before the expiry date</li>
+                    <li>Keep track of your application status</li>
+                    <li>Inform HR once your visa is renewed</li>
+                </ul>
+            </div>
+            
+            <div class="important-note">
+                <strong>⚠️ Important:</strong>
+                <p style="margin: 10px 0 0 0; font-size: 14px; color: #555;">
+                    An expired visa can lead to legal complications and may affect your employment status. 
+                    Please prioritize this matter and take necessary action immediately.
+                </p>
+            </div>
+            
+            <div class="contact-info">
+                <p><strong>Need Help?</strong></p>
+                <p>Contact HR Department for assistance with visa renewal procedures</p>
+            </div>
+            
+            <p style="margin-top: 25px;">Thank you for your prompt attention to this matter.</p>
+            
+            <p style="margin-top: 20px;">
+                Best regards,<br>
+                <strong>Human Resources Department</strong>
+            </p>
+        </div>
+        <div class="email-footer">
+            <p class="footer-text">This is an automated notification from Horilla HRM System</p>
+            <p class="footer-text">Please do not reply to this email</p>
+            <p class="footer-text">&copy; {{ "now"|date:"Y" }} Horilla. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -259,7 +259,7 @@
               <td>
                 <button type="button" class="visa-btn-action visa-btn-call" data-action="mark-called" data-employee-id="{{ emp.id }}">📞 {% trans "Called" %}</button>
                 <button type="button" class="visa-btn-action visa-btn-check" data-action="mark-done" data-employee-id="{{ emp.id }}">✔ {% trans "Done" %}</button>
-                <button type="button" class="visa-btn-action visa-btn-remove" data-action="remove" data-employee-id="{{ emp.id }}">🗑️ {% trans "Remove" %}</button>
+                <!-- <button type="button" class="visa-btn-action visa-btn-remove" data-action="remove" data-employee-id="{{ emp.id }}">🗑️ {% trans "Remove" %}</button> -->
               </td>
             </tr>
           {% endfor %}
@@ -289,17 +289,31 @@
   async function postAction(empId, action) {
     const url = `/employee/visa-action/${empId}/`;
     const csrftoken = getCookie('csrftoken');
+    console.log('postAction called:', { empId, action, url, csrftoken });
     try {
       const res = await fetch(url, {
         method: 'POST',
+        credentials: 'same-origin',
         headers: {
           'Content-Type': 'application/json',
           'X-CSRFToken': csrftoken || ''
         },
         body: JSON.stringify({ action: action })
       });
-      return await res.json();
+      console.log('fetch response status:', res.status);
+      // Try to parse JSON safely; if response is not JSON, return text as error
+      const text = await res.text();
+      console.log('response text:', text);
+      try {
+        const data = text ? JSON.parse(text) : {};
+        console.log('parsed JSON:', data);
+        return data;
+      } catch (err) {
+        console.error('JSON parse error:', err);
+        return { error: text || 'Invalid response' };
+      }
     } catch (err) {
+      console.error('fetch error:', err);
       return { error: err.message };
     }
   }
@@ -307,22 +321,34 @@
   document.addEventListener('click', async function(e) {
     var btn = e.target.closest('button[data-action]');
     if (!btn) return;
+    // prevent default navigation or other handlers
+    try { e.preventDefault(); } catch (err) {}
+    try { e.stopPropagation(); } catch (err) {}
+
     var action = btn.getAttribute('data-action');
     var empId = btn.getAttribute('data-employee-id');
+    console.log('Button clicked:', { action, empId });
 
-    // Handle remove action with confirmation dialog
+    // Handle remove action with confirmation dialog (showing employee name)
     if (action === 'remove') {
       var row = document.querySelector('tr[data-employee-id="' + empId + '"]');
-      var empName = row ? row.cells[1].innerText : 'Unknown';
-      const confirmed = confirm('Are you sure you want to remove the employee - ' + empName + ' from the visa expiring list as their visa got upgraded?');
-      if (!confirmed) return;
+      var empName = row ? (row.querySelector('.visa-link') ? row.querySelector('.visa-link').innerText.trim() : row.cells[1].innerText.trim()) : 'Unknown';
+      console.log('Remove button clicked for employee:', empName);
+      const confirmed = confirm('Are you sure you want to remove the employee ("' + empName + '") from the visa expiring list as their visa got upgraded?');
+      if (!confirmed) {
+        console.log('Removal cancelled by user');
+        return;
+      }
     }
 
     btn.disabled = true;
     const originalText = btn.innerText;
     btn.innerText = '...';
+    console.log('Sending action to backend:', action, empId);
     const result = await postAction(empId, action);
+    console.log('Action result:', result);
     if (result && result.status === 'ok') {
+      console.log('Action successful:', action);
       if (action === 'mark-called') {
         btn.innerText = '✔ Called';
         btn.style.backgroundColor = '#10b981';
@@ -336,14 +362,27 @@
       }
       // Remove row for remove action
       if (action === 'remove') {
+        console.log('Removing row for employee ID:', empId);
         var row = document.querySelector('tr[data-employee-id="' + empId + '"]');
         if (row) {
           row.style.transition = 'opacity 0.3s ease';
           row.style.opacity = '0';
-          setTimeout(() => row.remove(), 300);
+          setTimeout(() => {
+            try { row.remove(); } catch (err) {}
+            // Update employee count badge
+            var badge = document.querySelector('.visa-badge');
+            if (badge) {
+              var count = parseInt(badge.innerText) || 0;
+              if (count > 0) count--;
+              badge.innerText = count + ' Employee(s)';
+            }
+            // Show success message
+            alert('Employee removed successfully from visa expiring list.');
+          }, 300);
         }
       }
     } else {
+      console.log('Action failed:', result);
       btn.disabled = false;
       btn.innerText = originalText;
       alert(result && result.error ? result.error : 'Action failed');

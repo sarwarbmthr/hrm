@@ -2789,7 +2789,7 @@ def visa_expiry():
         is_active=True,
         visa_expire_date__gte=today,
         visa_expire_date__lte=thirty_days_later,
-    ).exclude(visa_expire_date__isnull=True).order_by(F("visa_expire_date").asc())
+    ).exclude(visa_expire_date__isnull=True).exclude(additional_info__visa_removed=True).order_by(F("visa_expire_date").asc())
 
     for employee in employees:
         employee.days_until_visa_expiry = (employee.visa_expire_date - today).days
@@ -2803,7 +2803,6 @@ def visa_expiry_list(request):
     Render a full listing page of employees whose visa expires within next 30 days.
     """
     employees = visa_expiry()
-    # Use Employee.get_email() method which prefers work info email
     return render(request, "employee/visa_expiry_list.html", {"employees": employees})
 
 
@@ -2853,6 +2852,116 @@ def visa_action(request, emp_id):
         return JsonResponse({"status": "ok", "action": action})
     except Exception as exc:
         return JsonResponse({"error": str(exc)}, status=500)
+
+
+@login_required
+def company_license_edit(request):
+    """
+    View to edit company license expiry date.
+    GET: Display form to edit license date
+    POST: Save the license date
+    """
+    from base.models import Company
+    from datetime import date
+    from django.contrib import messages
+    
+    # Get or create the first company (default)
+    company = Company.objects.first()
+    if not company:
+        # Create a default company if none exists
+        company = Company.objects.create(
+            company="Default Company",
+            address="",
+            country="",
+            state="",
+            city="",
+            zip=""
+        )
+    
+    if request.method == 'POST':
+        license_date_str = request.POST.get('license_expiry_date')
+        
+        if not license_date_str:
+            messages.error(request, _("Please provide a license expiry date"))
+        else:
+            try:
+                company.license_expiry_date = license_date_str
+                company.save(update_fields=['license_expiry_date'])
+                messages.success(request, _("Company license expiry date updated successfully"))
+                return redirect('/')  # Redirect to dashboard/home page
+            except Exception as e:
+                messages.error(request, _("Error updating license date: ") + str(e))
+    
+    context = {
+        'selected_company': company,
+        'license_expiry_date': company.license_expiry_date if company else None,
+    }
+    
+    return render(request, 'employee/company_license_edit.html', context)
+
+
+@login_required
+def company_license_status(request):
+    """
+    Return company license status for dashboard tile (AJAX endpoint).
+    """
+    from base.models import Company
+    from datetime import date
+    from django.template.loader import render_to_string
+    
+    company = Company.objects.first()  # You can filter by user's company if needed
+    
+    if not company or not company.license_expiry_date:
+        html = """
+        <div class="oh-card-dashboard__subtitle">Not Set</div>
+        <div class="oh-card-dashboard__icon">📋</div>
+        """
+        return HttpResponse(html)
+    
+    today = date.today()
+    days_left = (company.license_expiry_date - today).days
+    
+    # Format the expiry date
+    expiry_date_formatted = company.license_expiry_date.strftime("%d %b %Y")
+    
+    # Determine status message based on days left
+    if days_left <= 0:
+        status = "Expired"
+    elif days_left <= 59:
+        # Show in days if less than 60 days
+        status = f"{days_left} days left"
+    elif days_left < 365:
+        # Show in months and days
+        months = days_left // 30
+        remaining_days = days_left % 30
+        if remaining_days == 0:
+            status = f"{months} month{'s' if months > 1 else ''}"
+        elif remaining_days == 1:
+            status = f"{months} month{'s' if months > 1 else ''} {remaining_days} day"
+        else:
+            status = f"{months} month{'s' if months > 1 else ''} {remaining_days} days"
+    else:
+        # Show in years, months, and days
+        years = days_left // 365
+        remaining_days_after_years = days_left % 365
+        months = remaining_days_after_years // 30
+        days = remaining_days_after_years % 30
+        
+        if months == 0 and days == 0:
+            status = f"{years} year{'s' if years > 1 else ''}"
+        elif days == 0:
+            status = f"{years} year{'s' if years > 1 else ''} {months} month{'s' if months > 1 else ''}"
+        elif months == 0:
+            status = f"{years} year{'s' if years > 1 else ''} {days} day{'s' if days > 1 else ''}"
+        else:
+            status = f"{years} year{'s' if years > 1 else ''} {months} month{'s' if months > 1 else ''}"
+    
+    html = f"""
+    <div class="oh-card-dashboard__subtitle" style="font-size: 2rem; font-weight: 700;">{expiry_date_formatted}</div>
+    <div class="oh-card-dashboard__number" style="font-size: 1.25rem;">{status}</div>
+    """
+    
+    return HttpResponse(html)
 
 
 @login_required
