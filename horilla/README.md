@@ -375,7 +375,7 @@ python manage.py runserver 8080   # For Windows
 
 ## **About**
 
-[Horilla](https://www.horilla.com/) is an open-source HRMS solution designed to simplify HR operations and improve organizational efficiency.
+ 
 
 ---
 
