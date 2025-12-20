@@ -52,6 +52,7 @@
         </div>
         <main class="oh-auth">
             <div style="width:100%;">
+                {% comment %}
                 <div id="auth-logo-panel" style="position:fixed; left:0; top:80px; width:220px; display:flex; flex-direction:column; align-items:flex-start; padding-left:8px; z-index:30;">
                     <img
                         src="{% if white_label_company.icon %}{{ white_label_company.icon.url }}{% else %}{% static 'images/ui/sbm_logo.png' %}{% endif %}"
@@ -62,8 +63,9 @@
                     <p style="font-size: large; color: gray; text-align: left; margin-top:0.5rem;">{{white_label_company}}</p>
                     {% endif %}
                 </div>
-                <div id="auth-content" style="width:100%; display:flex; margin-left:220px;">
-                    <div style="flex:1; display:flex; justify-content:flex-start; padding-left:25%; align-items:center;">
+                {% endcomment %}
+                <div id="auth-content" style="width:100%; display:flex; margin-left:0;">
+                    <div style="flex:1; display:flex; justify-content:center; padding-left:0; align-items:center;">
                             <div class="oh-auth-card mb-4" style="width:100%; max-width:520px;">
                 <h1 class="oh-onboarding-card__title oh-onboarding-card__title--h2 text-center my-3">
                     {% trans "Sign In" %}
