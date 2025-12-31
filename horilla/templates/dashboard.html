@@ -213,6 +213,23 @@
                             </div>
                         </a>
                     </div>
+                    <div class="col-12 col-sm-12 col-md-6 col-lg-4">
+                        <a href="{% url 'validity-records-manage' %}" style="text-decoration: none">
+                            <div class="oh-card-dashboard oh-card-dashboard--info tile">
+                                <div class="oh-card-dashboard__header">
+                                    <span class="oh-card-dashboard__title">{% trans "Validity Records Expiring" %}</span>
+                                </div>
+                                <div class="oh-card-dashboard__body">
+                                    <div class="oh-card-dashboard__counts">
+                                        <span class="oh-card-dashboard__count" hx-get="{% url 'validity-records-status' %}"
+                                            hx-trigger="load">
+                                            <div style="height: 67px;"></div>
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        </a>
+                    </div>
                 {% endif %}
                 <div class="oh-dashboard__movable-cards row mt-4" id="tileContainer">
                     {% include "dashboard_tile_container.html" %}
@@ -226,6 +243,8 @@
             {% if 'visa_expiry_view'|feature_is_accessible:request or perms.employee.view_employee %}
                 <div class="oh-dashboard__events" hx-get="{% url 'get-visa-expiry' %}" hx-trigger="load"> </div>
             {% endif %}
+            <div class="oh-dashboard__events" hx-get="{% url 'get-company-license-expiry' %}" hx-trigger="load"> </div>
+            <div class="oh-dashboard__events" hx-get="{% url 'get-validity-records' %}" hx-trigger="load"> </div>
             <div class="oh-card-dashboard oh-card-dashboard--no-scale oh-card-dashboard--transparent mb-3">
                 <div style="display: flex;align-items:center;justify-content:space-between;margin-right:20px">
                     <span class="oh-card-dashboard__title">{% trans "Announcements" %}</span>

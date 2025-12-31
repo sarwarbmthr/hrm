@@ -1,0 +1,121 @@
+{% extends 'index.html' %}
+{% load i18n %}
+{% load static %}
+
+{% block content %}
+<div class="oh-wrapper">
+    <div class="oh-main__content-wrapper">
+        <div class="oh-title-path">
+            <h1 class="oh-title-path__title">
+                {% if record %}
+                    {% trans "Edit Validity Record" %}
+                {% else %}
+                    {% trans "Add New Validity Record" %}
+                {% endif %}
+            </h1>
+            <p class="oh-title-path__description">
+                {% trans "Fill in the details below to add or update a validity record" %}
+            </p>
+        </div>
+
+        <div class="oh-card mt-3">
+            <div class="oh-card__body">
+                <form method="post" class="oh-form">
+                    {% csrf_token %}
+                    
+                    {% if form.errors %}
+                        <div class="oh-alert oh-alert--danger mb-3">
+                            <strong>{% trans "Please correct the following errors:" %}</strong>
+                            <ul class="mb-0 mt-2">
+                                {% for field in form %}
+                                    {% for error in field.errors %}
+                                        <li>{{ field.label }}: {{ error }}</li>
+                                    {% endfor %}
+                                {% endfor %}
+                                {% for error in form.non_field_errors %}
+                                    <li>{{ error }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.component_name.id_for_label }}" class="oh-label">
+                                {{ form.component_name.label }}
+                                <span class="text-danger">*</span>
+                            </label>
+                            {{ form.component_name }}
+                            {% if form.component_name.help_text %}
+                                <small class="oh-help-text">{{ form.component_name.help_text }}</small>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.expiry_date.id_for_label }}" class="oh-label">
+                                {{ form.expiry_date.label }}
+                                <span class="text-danger">*</span>
+                            </label>
+                            {{ form.expiry_date }}
+                            {% if form.expiry_date.help_text %}
+                                <small class="oh-help-text">{{ form.expiry_date.help_text }}</small>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.company_id.id_for_label }}" class="oh-label">
+                                {{ form.company_id.label }}
+                            </label>
+                            {{ form.company_id }}
+                            {% if form.company_id.help_text %}
+                                <small class="oh-help-text">{{ form.company_id.help_text }}</small>
+                            {% endif %}
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label for="{{ form.is_active.id_for_label }}" class="oh-label">
+                                {{ form.is_active.label }}
+                            </label>
+                            <div class="oh-form-check">
+                                {{ form.is_active }}
+                            </div>
+                            {% if form.is_active.help_text %}
+                                <small class="oh-help-text">{{ form.is_active.help_text }}</small>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            <label for="{{ form.description.id_for_label }}" class="oh-label">
+                                {{ form.description.label }}
+                            </label>
+                            {{ form.description }}
+                            {% if form.description.help_text %}
+                                <small class="oh-help-text">{{ form.description.help_text }}</small>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="oh-actions oh-actions--right mt-4">
+                        <a href="{% url 'validity-records-manage' %}" class="oh-btn oh-btn--secondary">
+                            <ion-icon name="arrow-back-outline"></ion-icon>
+                            {% trans "Cancel" %}
+                        </a>
+                        <button type="submit" class="oh-btn oh-btn--primary">
+                            <ion-icon name="checkmark-outline"></ion-icon>
+                            {% if record %}
+                                {% trans "Update Record" %}
+                            {% else %}
+                                {% trans "Create Record" %}
+                            {% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}

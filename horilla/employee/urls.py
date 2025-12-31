@@ -180,6 +180,7 @@ urlpatterns = [
     path("visa-action/<int:emp_id>/", views.visa_action, name="visa-action"),
     path("company-license-edit", views.company_license_edit, name="company-license-edit"),
     path("company-license-status", views.company_license_status, name="company-license-status"),
+    path("get-company-license-expiry", views.get_companies_license_expiry, name="get-company-license-expiry"),
     path("dashboard", views.dashboard, name="dashboard"),
     path(
         "total-employees-count",
@@ -435,4 +436,11 @@ urlpatterns = [
         name="employee-tag-delete",
         kwargs={"model": EmployeeTag, "HttpResponse": True},
     ),
+    # Validity Records URLs
+    path("get-validity-records", views.get_validity_records, name="get-validity-records"),
+    path("validity-records-manage", views.validity_records_manage, name="validity-records-manage"),
+    path("validity-record-create", views.validity_record_create, name="validity-record-create"),
+    path("validity-record-update/<int:record_id>", views.validity_record_update, name="validity-record-update"),
+    path("validity-record-delete/<int:record_id>", views.validity_record_delete, name="validity-record-delete"),
+    path("validity-records-status", views.validity_records_status, name="validity-records-status"),
 ]

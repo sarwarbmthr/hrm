@@ -663,11 +663,11 @@ class EmployeeWorkInformation(models.Model):
     contract_end_date = models.DateField(
         blank=True, null=True, verbose_name=_("Contract End Date")
     )
-    basic_salary = models.IntegerField(
-        null=True, blank=True, default=0, verbose_name=_("Basic Salary")
+    basic_salary = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True, default=0, verbose_name=_("Basic Salary")
     )
-    salary_hour = models.IntegerField(
-        null=True, blank=True, default=0, verbose_name=_("Salary Per Hour")
+    salary_hour = models.DecimalField(
+        max_digits=10, decimal_places=2, null=True, blank=True, default=0, verbose_name=_("Salary Per Hour")
     )
     additional_info = models.JSONField(null=True, blank=True)
     experience = models.FloatField(null=True, blank=True, default=0)
@@ -967,6 +967,32 @@ class ProfileEditFeature(HorillaModel):
 
     is_enabled = models.BooleanField(default=False)
     objects = models.Manager()
+
+
+class ValidityRecord(HorillaModel):
+    """
+    ValidityRecord model to store components with their expiry/validity dates
+    """
+    component_name = models.CharField(max_length=255, verbose_name=_("Component Name"))
+    expiry_date = models.DateField(verbose_name=_("Expiry Date"))
+    description = models.TextField(max_length=500, null=True, blank=True, verbose_name=_("Description"))
+    company_id = models.ForeignKey(
+        Company,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        verbose_name=_("Company"),
+    )
+    is_active = models.BooleanField(default=True, verbose_name=_("Is Active"))
+    objects = HorillaCompanyManager()
+
+    def __str__(self):
+        return f"{self.component_name} - {self.expiry_date}"
+
+    class Meta:
+        ordering = ['expiry_date']
+        verbose_name = _("Validity Record")
+        verbose_name_plural = _("Validity Records")
 
 
 from accessibility.accessibility import ACCESSBILITY_FEATURE

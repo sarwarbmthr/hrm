@@ -2857,44 +2857,96 @@ def visa_action(request, emp_id):
 @login_required
 def company_license_edit(request):
     """
-    View to edit company license expiry date.
-    GET: Display form to edit license date
-    POST: Save the license date
+    View to manage company licenses - add, edit company names and license expiry dates.
+    GET: Display all companies with their license information
+    POST: Handle add new company, edit company name, or update license date
     """
     from base.models import Company
     from datetime import date
     from django.contrib import messages
-    
-    # Get or create the first company (default)
-    company = Company.objects.first()
-    if not company:
-        # Create a default company if none exists
-        company = Company.objects.create(
-            company="Default Company",
-            address="",
-            country="",
-            state="",
-            city="",
-            zip=""
-        )
+    import json
     
     if request.method == 'POST':
-        license_date_str = request.POST.get('license_expiry_date')
+        action = request.POST.get('action')
         
-        if not license_date_str:
-            messages.error(request, _("Please provide a license expiry date"))
-        else:
-            try:
-                company.license_expiry_date = license_date_str
-                company.save(update_fields=['license_expiry_date'])
-                messages.success(request, _("Company license expiry date updated successfully"))
-                return redirect('/')  # Redirect to dashboard/home page
-            except Exception as e:
-                messages.error(request, _("Error updating license date: ") + str(e))
+        if action == 'add_company':
+            # Add new company
+            company_name = request.POST.get('company_name', '').strip()
+            address = request.POST.get('address', '').strip()
+            country = request.POST.get('country', '').strip()
+            state = request.POST.get('state', '').strip()
+            city = request.POST.get('city', '').strip()
+            zip_code = request.POST.get('zip', '').strip()
+            license_date = request.POST.get('license_expiry_date')
+            
+            if not company_name:
+                messages.error(request, _("Company name is required"))
+            else:
+                try:
+                    # Check if company with same name and address already exists
+                    if Company.objects.filter(company=company_name, address=address).exists():
+                        messages.error(request, _("A company with this name and address already exists"))
+                    else:
+                        company = Company.objects.create(
+                            company=company_name,
+                            address=address,
+                            country=country,
+                            state=state,
+                            city=city,
+                            zip=zip_code,
+                            license_expiry_date=license_date if license_date else None
+                        )
+                        messages.success(request, _("Company added successfully"))
+                except Exception as e:
+                    messages.error(request, _("Error adding company: ") + str(e))
+        
+        elif action == 'edit_company':
+            # Edit existing company
+            company_id = request.POST.get('company_id')
+            company_name = request.POST.get('company_name', '').strip()
+            license_date = request.POST.get('license_expiry_date')
+            
+            if not company_id:
+                messages.error(request, _("Company ID is required"))
+            elif not company_name:
+                messages.error(request, _("Company name is required"))
+            else:
+                try:
+                    company = Company.objects.get(id=company_id)
+                    company.company = company_name
+                    if license_date:
+                        company.license_expiry_date = license_date
+                    else:
+                        company.license_expiry_date = None
+                    company.save()
+                    messages.success(request, _("Company updated successfully"))
+                except Company.DoesNotExist:
+                    messages.error(request, _("Company not found"))
+                except Exception as e:
+                    messages.error(request, _("Error updating company: ") + str(e))
+        
+        elif action == 'delete_company':
+            # Delete company
+            company_id = request.POST.get('company_id')
+            
+            if not company_id:
+                messages.error(request, _("Company ID is required"))
+            else:
+                try:
+                    company = Company.objects.get(id=company_id)
+                    company_name = company.company
+                    company.delete()
+                    messages.success(request, _("Company '{}' deleted successfully").format(company_name))
+                except Company.DoesNotExist:
+                    messages.error(request, _("Company not found"))
+                except Exception as e:
+                    messages.error(request, _("Error deleting company: ") + str(e))
+    
+    # Get all companies
+    companies = Company.objects.all().order_by('company')
     
     context = {
-        'selected_company': company,
-        'license_expiry_date': company.license_expiry_date if company else None,
+        'companies': companies,
     }
     
     return render(request, 'employee/company_license_edit.html', context)
@@ -3043,12 +3095,71 @@ def get_employees_visa_expiry(request):
         request, "dashboard/visa_expiry_carousel.html", {"visa_expiries": visa_expiries}
     )
 
+
+@login_required
+def get_companies_license_expiry(request):
+    """
+    Render all companies with licenses expiring within the next 90 days for the dashboard.
+    Color coded: Red (<30 days), Yellow (30-60 days), Blue (60-90 days)
+    """
+    from base.models import Company
+    from datetime import date, timedelta
+    
+    today = date.today()
+    ninety_days_later = today + timedelta(days=90)
+    
+    # Get companies with licenses expiring in the next 90 days
+    companies = Company.objects.filter(
+        license_expiry_date__gte=today,
+        license_expiry_date__lte=ninety_days_later,
+    ).exclude(license_expiry_date__isnull=True).order_by('license_expiry_date')
+    
+    company_licenses = []
+    for company in companies:
+        days_until_expiry = (company.license_expiry_date - today).days
+        
+        # Determine urgency level for styling
+        if days_until_expiry <= 30:
+            urgency = "critical"  # Red
+        elif days_until_expiry <= 60:
+            urgency = "warning"  # Yellow
+        else:
+            urgency = "normal"  # Blue/Green
+        
+        company_licenses.append({
+            "id": company.id,
+            "name": company.company,
+            "license_expiry_date": company.license_expiry_date.strftime("%d %b %Y"),
+            "days_until_expiry": days_until_expiry,
+            "urgency": urgency,
+            "daysUntilExpiry": (
+                _("Today")
+                if days_until_expiry == 0
+                else (
+                    _("Tomorrow")
+                    if days_until_expiry == 1
+                    else f"In {days_until_expiry} Days"
+                )
+            ),
+            "address": company.address,
+            "city": company.city,
+            "state": company.state,
+            "country": company.country,
+        })
+    
+    return render(
+        request, "dashboard/company_license_expiry_container.html", {"company_licenses": company_licenses}
+    )
+
 @login_required
 @manager_can_enter("employee.view_employee")
 def dashboard(request):
     """
     This method is used to render individual dashboard for employee module
     """
+    from datetime import date, timedelta
+    from employee.models import ValidityRecord
+    
     upcoming_birthdays = birthday()
     upcoming_visa_expiries_employees = visa_expiry()
     
@@ -3082,6 +3193,46 @@ def dashboard(request):
         for emp in upcoming_visa_expiries_employees
     ]
     
+    # Get validity records expiring in the next 90 days
+    today = date.today()
+    ninety_days_later = today + timedelta(days=90)
+    
+    records = ValidityRecord.objects.filter(
+        expiry_date__gte=today,
+        expiry_date__lte=ninety_days_later,
+        is_active=True,
+    ).order_by('expiry_date')
+    
+    validity_records = []
+    for record in records:
+        days_until_expiry = (record.expiry_date - today).days
+        
+        # Determine urgency level for styling
+        if days_until_expiry <= 30:
+            urgency = "critical"  # Red
+        elif days_until_expiry <= 60:
+            urgency = "warning"  # Yellow
+        else:
+            urgency = "normal"  # Green
+        
+        validity_records.append({
+            "id": record.id,
+            "component_name": record.component_name,
+            "expiry_date": record.expiry_date.strftime("%d %b %Y"),
+            "days_until_expiry": days_until_expiry,
+            "urgency": urgency,
+            "daysUntilExpiry": (
+                _("Today")
+                if days_until_expiry == 0
+                else (
+                    _("Tomorrow")
+                    if days_until_expiry == 1
+                    else f"In {days_until_expiry} Days"
+                )
+            ),
+            "description": record.description or "",
+        })
+    
     employees = Employee.objects.all()
     employees = filtersubordinates(request, employees, "employee.view_employee")
     active_employees = employees.filter(is_active=True)
@@ -3098,6 +3249,7 @@ def dashboard(request):
         {
             "birthdays": upcoming_birthdays,
             "visa_expiries": upcoming_visa_expiries,
+            "validity_records": validity_records,
             "active_employees": len(active_employees),
             "inactive_employees": len(inactive_employees),
             "total_employees": len(employees),
@@ -3911,3 +4063,166 @@ def employee_tag_update(request, tag_id):
         "base/employee_tag/employee_tag_form.html",
         {"form": form, "tag_id": tag_id},
     )
+
+
+# Validity Records Views
+@login_required
+def get_validity_records(request):
+    """
+    Render all validity records expiring within the next 90 days for the dashboard.
+    Color coded: Red (<30 days), Yellow (30-60 days), Green (60-90 days)
+    """
+    from datetime import date, timedelta
+    from employee.models import ValidityRecord
+    
+    today = date.today()
+    ninety_days_later = today + timedelta(days=90)
+    
+    # Get validity records expiring in the next 90 days
+    records = ValidityRecord.objects.filter(
+        expiry_date__gte=today,
+        expiry_date__lte=ninety_days_later,
+        is_active=True,
+    ).order_by('expiry_date')
+    
+    validity_records = []
+    for record in records:
+        days_until_expiry = (record.expiry_date - today).days
+        
+        # Determine urgency level for styling
+        if days_until_expiry <= 30:
+            urgency = "critical"  # Red
+        elif days_until_expiry <= 60:
+            urgency = "warning"  # Yellow
+        else:
+            urgency = "normal"  # Green
+        
+        validity_records.append({
+            "id": record.id,
+            "component_name": record.component_name,
+            "expiry_date": record.expiry_date.strftime("%d %b %Y"),
+            "days_until_expiry": days_until_expiry,
+            "urgency": urgency,
+            "daysUntilExpiry": (
+                _("Today")
+                if days_until_expiry == 0
+                else (
+                    _("Tomorrow")
+                    if days_until_expiry == 1
+                    else f"In {days_until_expiry} Days"
+                )
+            ),
+            "description": record.description or "",
+        })
+    
+    return render(
+        request, "dashboard/validity_records_container.html", {"validity_records": validity_records}
+    )
+
+
+@login_required
+@manager_can_enter("employee.view_employee")
+def validity_records_manage(request):
+    """
+    View to manage validity records (list, create, edit, delete)
+    """
+    from employee.models import ValidityRecord
+    from employee.forms import ValidityRecordForm
+    from datetime import date
+    
+    records = ValidityRecord.objects.all().order_by('expiry_date')
+    form = ValidityRecordForm()
+    
+    context = {
+        "records": records,
+        "form": form,
+        "today": date.today(),
+    }
+    
+    return render(request, "validity_records/manage_validity_records.html", context)
+
+
+@login_required
+@manager_can_enter("employee.add_validityrecord")
+def validity_record_create(request):
+    """
+    Create a new validity record
+    """
+    from employee.models import ValidityRecord
+    from employee.forms import ValidityRecordForm
+    
+    if request.method == "POST":
+        form = ValidityRecordForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, _("Validity record created successfully!"))
+            return redirect("validity-records-manage")
+    else:
+        form = ValidityRecordForm()
+    
+    return render(request, "validity_records/validity_record_form.html", {"form": form})
+
+
+@login_required
+@manager_can_enter("employee.change_validityrecord")
+def validity_record_update(request, record_id):
+    """
+    Update an existing validity record
+    """
+    from employee.models import ValidityRecord
+    from employee.forms import ValidityRecordForm
+    
+    record = ValidityRecord.objects.get(id=record_id)
+    
+    if request.method == "POST":
+        form = ValidityRecordForm(request.POST, instance=record)
+        if form.is_valid():
+            form.save()
+            messages.success(request, _("Validity record updated successfully!"))
+            return redirect("validity-records-manage")
+    else:
+        form = ValidityRecordForm(instance=record)
+    
+    return render(request, "validity_records/validity_record_form.html", {"form": form, "record": record})
+
+
+@login_required
+@manager_can_enter("employee.delete_validityrecord")
+def validity_record_delete(request, record_id):
+    """
+    Delete a validity record
+    """
+    from employee.models import ValidityRecord
+    
+    try:
+        record = ValidityRecord.objects.get(id=record_id)
+        record.delete()
+        messages.success(request, _("Validity record deleted successfully!"))
+    except ValidityRecord.DoesNotExist:
+        messages.error(request, _("Validity record not found!"))
+    
+    return redirect("validity-records-manage")
+
+
+@login_required
+def validity_records_status(request):
+    """
+    Return the count of validity records expiring in the next 90 days for dashboard tile
+    """
+    from datetime import date, timedelta
+    from employee.models import ValidityRecord
+    from django.http import HttpResponse
+    
+    today = date.today()
+    ninety_days_later = today + timedelta(days=90)
+    
+    # Count records expiring in the next 90 days
+    count = ValidityRecord.objects.filter(
+        expiry_date__gte=today,
+        expiry_date__lte=ninety_days_later,
+        is_active=True,
+    ).count()
+    
+    # Return simple HTML with count
+    html = f'<span class="oh-card-dashboard__count">{count}</span>'
+    return HttpResponse(html)

@@ -870,12 +870,12 @@ def bulk_create_work_info_import(success_lists):
         )
         basic_salary = (
             convert_nan("Basic Salary", work_info)
-            if type(convert_nan("Basic Salary", work_info)) is int
+            if type(convert_nan("Basic Salary", work_info)) in [int, float]
             else 0
         )
         salary_hour = (
             convert_nan("Salary Hour", work_info)
-            if type(convert_nan("Salary Hour", work_info)) is int
+            if type(convert_nan("Salary Hour", work_info)) in [int, float]
             else 0
         )
 

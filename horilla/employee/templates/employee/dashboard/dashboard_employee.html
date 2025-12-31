@@ -91,6 +91,8 @@
     <div class="oh-dashboard__right  col-12 col-sm-12 col-md-12 col-lg-3">
       {% include 'dashboard/birthdays_container.html' %}
       {% include 'dashboard/visa_expiry_container.html' %}
+      <div id="companyLicenseContainer"></div>
+      <div id="validityRecordsContainer"></div>
       <div class="oh-card-dashboard oh-card-dashboard--no-scale oh-card-dashboard--transparent mt-3">
         <div class="oh-card-dashboard__header oh-card-dashboard__header--divider">
           <span class="oh-card-dashboard__title">Candidate on Onboard</span>
@@ -118,5 +120,30 @@
 <script src="{% static 'dashboard/employeeChart.js' %}"></script>
 <script src="{% static 'dashboard/getBirthday.js' %}"></script>
 
+<script>
+// Load company license expiry container
+$.ajax({
+    url: "{% url 'get-company-license-expiry' %}",
+    type: "GET",
+    success: function(response) {
+        $('#companyLicenseContainer').html(response);
+    },
+    error: function() {
+        console.log('Failed to load company license expiry data');
+    }
+});
+
+// Load validity records container
+$.ajax({
+    url: "{% url 'get-validity-records' %}",
+    type: "GET",
+    success: function(response) {
+        $('#validityRecordsContainer').html(response);
+    },
+    error: function() {
+        console.log('Failed to load validity records data');
+    }
+});
+</script>
 
 {% endblock content %}

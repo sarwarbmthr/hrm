@@ -1,0 +1,143 @@
+{% extends 'index.html' %}
+{% load i18n %}
+{% load static %}
+
+{% block content %}
+<div class="oh-wrapper">
+    <div class="oh-main__content-wrapper">
+        <div class="oh-title-path">
+            <h1 class="oh-title-path__title">{% trans "Manage Validity Records" %}</h1>
+            <p class="oh-title-path__description">{% trans "Add, edit, or delete validity records with component names and expiry dates" %}</p>
+        </div>
+
+        <div class="oh-actions oh-actions--sticky mt-3">
+            <a href="{% url 'validity-record-create' %}" class="oh-btn oh-btn--primary">
+                <ion-icon name="add-outline"></ion-icon>
+                {% trans "Add New Record" %}
+            </a>
+        </div>
+
+        <div class="oh-card mt-3">
+            <div class="oh-card__body">
+                {% if messages %}
+                    {% for message in messages %}
+                        <div class="oh-alert oh-alert--{{ message.tags }} mb-3">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+
+                {% if records %}
+                    <div class="table-responsive">
+                        <table class="oh-table oh-table--hover">
+                            <thead>
+                                <tr>
+                                    <th>{% trans "Component Name" %}</th>
+                                    <th>{% trans "Expiry Date" %}</th>
+                                    <th>{% trans "Days Until Expiry" %}</th>
+                                    <th>{% trans "Status" %}</th>
+                                    <th>{% trans "Description" %}</th>
+                                    <th>{% trans "Company" %}</th>
+                                    <th class="text-center">{% trans "Actions" %}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% load tz %}
+                                {% now "Y-m-d" as today %}
+                                {% for record in records %}
+                                    <tr>
+                                        <td>
+                                            <strong>{{ record.component_name }}</strong>
+                                        </td>
+                                        <td>{{ record.expiry_date|date:"d M Y" }}</td>
+                                        <td>
+                                            {% if record.expiry_date|date:"Y-m-d" < today %}
+                                                <span class="oh-badge oh-badge--danger">{% trans "Expired" %}</span>
+                                            {% else %}
+                                                {{ record.expiry_date|timeuntil }}
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if record.is_active %}
+                                                <span class="oh-badge oh-badge--success">{% trans "Active" %}</span>
+                                            {% else %}
+                                                <span class="oh-badge oh-badge--neutral">{% trans "Inactive" %}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if record.description %}
+                                                <span title="{{ record.description }}">{{ record.description|truncatewords:5 }}</span>
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td>
+                                            {% if record.company_id %}
+                                                {{ record.company_id.company }}
+                                            {% else %}
+                                                <span class="text-muted">-</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-center">
+                                            <div class="oh-actions oh-actions--inline">
+                                                <a href="{% url 'validity-record-update' record.id %}" class="oh-btn oh-btn--info oh-btn--sm" title="{% trans 'Edit' %}">
+                                                    <ion-icon name="create-outline"></ion-icon>
+                                                    {% trans "Edit" %}
+                                                </a>
+                                                <a href="javascript:void(0);" 
+                                                   class="oh-btn oh-btn--danger oh-btn--sm delete-record" 
+                                                   title="{% trans 'Delete' %}"
+                                                   data-url="{% url 'validity-record-delete' record.id %}">
+                                                    <ion-icon name="trash-outline"></ion-icon>
+                                                    {% trans "Delete" %}
+                                                </a>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="oh-empty">
+                        <img src="{% static 'images/ui/empty.svg' %}" class="oh-empty__image" alt="No records" />
+                        <h3 class="oh-empty__title">{% trans "No Validity Records Found" %}</h3>
+                        <p class="oh-empty__subtitle">{% trans "Start by adding your first validity record using the button above." %}</p>
+                        <a href="{% url 'validity-record-create' %}" class="oh-btn oh-btn--primary mt-3">
+                            <ion-icon name="add-outline"></ion-icon>
+                            {% trans "Add New Record" %}
+                        </a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Auto-hide alerts after 5 seconds
+    setTimeout(function() {
+        const alerts = document.querySelectorAll('.oh-alert');
+        alerts.forEach(function(alert) {
+            alert.style.transition = 'opacity 0.5s';
+            alert.style.opacity = '0';
+            setTimeout(function() {
+                alert.remove();
+            }, 500);
+        });
+    }, 5000);
+    
+    // Handle delete confirmation
+    document.addEventListener('DOMContentLoaded', function() {
+        const deleteButtons = document.querySelectorAll('.delete-record');
+        deleteButtons.forEach(function(button) {
+            button.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (confirm('{% trans "Are you sure you want to delete this record?" %}')) {
+                    window.location.href = this.getAttribute('data-url');
+                }
+            });
+        });
+    });
+</script>
+{% endblock content %}

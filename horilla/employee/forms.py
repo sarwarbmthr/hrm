@@ -48,6 +48,7 @@ from employee.models import (
     NoteFiles,
     Policy,
     PolicyMultipleFile,
+    ValidityRecord,
 )
 from horilla import horilla_middlewares
 from horilla_audit.models import AccountBlockUnblock
@@ -805,3 +806,26 @@ class EmployeeGeneralSettingPrefixForm(forms.ModelForm):
             "badge_id_prefix": forms.TextInput(attrs={"class": "oh-input w-100"}),
             "company_id": forms.Select(attrs={"class": "oh-select oh-select-2 w-100"}),
         }
+
+
+class ValidityRecordForm(ModelForm):
+    """
+    Validity Record form for creating and editing validity records
+    """
+
+    class Meta:
+        """
+        Meta class for additional options
+        """
+
+        model = ValidityRecord
+        fields = ["component_name", "expiry_date", "description", "company_id", "is_active"]
+        widgets = {
+            "expiry_date": DateInput(attrs={"type": "date"}),
+            "description": forms.Textarea(attrs={"rows": 3}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["component_name"].widget.attrs.update({"placeholder": _("Enter component name")})
+        self.fields["description"].widget.attrs.update({"placeholder": _("Enter description (optional)")})
