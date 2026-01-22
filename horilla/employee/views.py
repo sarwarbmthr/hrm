@@ -4130,7 +4130,8 @@ def validity_records_manage(request):
     from employee.forms import ValidityRecordForm
     from datetime import date
     
-    records = ValidityRecord.objects.all().order_by('expiry_date')
+    # Use entire() to get ALL records without company filtering
+    records = ValidityRecord.objects.entire().order_by('expiry_date')
     form = ValidityRecordForm()
     
     context = {
@@ -4187,21 +4188,62 @@ def validity_record_update(request, record_id):
 
 
 @login_required
-@manager_can_enter("employee.delete_validityrecord")
+@require_http_methods(["POST"])
 def validity_record_delete(request, record_id):
     """
-    Delete a validity record
+    Delete a validity record - completely removes from database
     """
     from employee.models import ValidityRecord
+    from django.http import JsonResponse
+    from django.db import transaction
+    import json
     
     try:
-        record = ValidityRecord.objects.get(id=record_id)
-        record.delete()
-        messages.success(request, _("Validity record deleted successfully!"))
+        # Get record using entire() to bypass company filtering
+        record = ValidityRecord.objects.entire().get(id=record_id)
+        component_name = record.component_name
+        record_id_check = record.id
+        
+        print(f"\n[DELETE] Starting deletion of record ID: {record_id_check} - {component_name}")
+        
+        # Delete in transaction
+        with transaction.atomic():
+            record.delete()
+            print(f"[DELETE] Record deleted from database")
+        
+        # Verify - check in entire() queryset (bypasses all filters)
+        still_exists = ValidityRecord.objects.entire().filter(id=record_id_check).exists()
+        
+        print(f"[DELETE] Verification - Record still exists: {still_exists}")
+        
+        if still_exists:
+            print(f"[ERROR] Record still exists after delete!")
+            return JsonResponse({
+                "success": False,
+                "message": "Delete failed - record still exists"
+            }, status=500)
+        
+        print(f"[SUCCESS] Record {record_id_check} completely deleted")
+        return JsonResponse({
+            "success": True,
+            "message": f"Record {component_name} deleted successfully!",
+            "record_id": record_id_check
+        }, status=200)
+        
     except ValidityRecord.DoesNotExist:
-        messages.error(request, _("Validity record not found!"))
-    
-    return redirect("validity-records-manage")
+        print(f"[ERROR] Record {record_id} not found")
+        return JsonResponse({
+            "success": False,
+            "message": "Record not found"
+        }, status=404)
+    except Exception as e:
+        import traceback
+        print(f"\n[EXCEPTION] Error deleting record:")
+        traceback.print_exc()
+        return JsonResponse({
+            "success": False,
+            "message": f"Error: {str(e)}"
+        }, status=500)
 
 
 @login_required

@@ -4,6 +4,24 @@
 
 {% block content %}
 <div class="oh-wrapper">
+    {% csrf_token %}
+    
+    <!-- Custom Delete Confirmation Modal -->
+    <div id="deleteConfirmModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
+        <div style="background: white; border-radius: 8px; padding: 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); max-width: 400px; width: 90%;">
+            <h3 style="margin-top: 0; color: #333; font-size: 18px; text-align: center;">Confirm Delete</h3>
+            <p id="deleteConfirmMessage" style="color: #666; margin: 20px 0; font-size: 16px; text-align: center;"></p>
+            <div style="display: flex; gap: 10px; justify-content: center; margin-top: 30px;">
+                <button id="deleteConfirmNo" type="button" style="padding: 10px 20px; background: #6c757d; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; min-width: 80px;">
+                    No
+                </button>
+                <button id="deleteConfirmYes" type="button" style="padding: 10px 20px; background: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 14px; min-width: 80px;">
+                    Delete
+                </button>
+            </div>
+        </div>
+    </div>
+    
     <div class="oh-main__content-wrapper">
         <div class="oh-title-path">
             <h1 class="oh-title-path__title">{% trans "Manage Validity Records" %}</h1>
@@ -45,7 +63,7 @@
                                 {% load tz %}
                                 {% now "Y-m-d" as today %}
                                 {% for record in records %}
-                                    <tr>
+                                    <tr data-record-id="{{ record.id }}">
                                         <td>
                                             <strong>{{ record.component_name }}</strong>
                                         </td>
@@ -84,13 +102,12 @@
                                                     <ion-icon name="create-outline"></ion-icon>
                                                     {% trans "Edit" %}
                                                 </a>
-                                                <a href="javascript:void(0);" 
-                                                   class="oh-btn oh-btn--danger oh-btn--sm delete-record" 
+                                                <button type="button" class="oh-btn oh-btn--danger oh-btn--sm delete-record" 
                                                    title="{% trans 'Delete' %}"
-                                                   data-url="{% url 'validity-record-delete' record.id %}">
+                                                   data-record-id="{{ record.id }}">
                                                     <ion-icon name="trash-outline"></ion-icon>
                                                     {% trans "Delete" %}
-                                                </a>
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -115,9 +132,14 @@
 </div>
 
 <script>
+    // Get CSRF token from form input
+    function getCsrfToken() {
+        return document.querySelector('[name=csrfmiddlewaretoken]')?.value || '';
+    }
+    
     // Auto-hide alerts after 5 seconds
     setTimeout(function() {
-        const alerts = document.querySelectorAll('.oh-alert');
+        var alerts = document.querySelectorAll('.oh-alert');
         alerts.forEach(function(alert) {
             alert.style.transition = 'opacity 0.5s';
             alert.style.opacity = '0';
@@ -127,17 +149,177 @@
         });
     }, 5000);
     
-    // Handle delete confirmation
+    // Store current delete context
+    var deleteContext = {
+        recordId: null,
+        button: null
+    };
+    
+    // Show custom delete confirmation modal
+    function showDeleteConfirm(recordId, componentName, button) {
+        console.log('Showing confirmation for:', componentName);
+        
+        deleteContext.recordId = recordId;
+        deleteContext.button = button;
+        
+        document.getElementById('deleteConfirmMessage').textContent = 
+            'Are you sure you want to delete "' + componentName + '" record?';
+        
+        var modal = document.getElementById('deleteConfirmModal');
+        modal.style.display = 'flex';
+        console.log('Modal displayed');
+    }
+    
+    // Hide custom delete confirmation modal
+    function hideDeleteConfirm() {
+        console.log('Hiding modal');
+        document.getElementById('deleteConfirmModal').style.display = 'none';
+        deleteContext.recordId = null;
+        deleteContext.button = null;
+    }
+    
+    // Setup modal button handlers
     document.addEventListener('DOMContentLoaded', function() {
-        const deleteButtons = document.querySelectorAll('.delete-record');
+        console.log('DOMContentLoaded - Setting up event handlers');
+        
+        // Modal buttons
+        var yesBtn = document.getElementById('deleteConfirmYes');
+        var noBtn = document.getElementById('deleteConfirmNo');
+        var modal = document.getElementById('deleteConfirmModal');
+        
+        if (yesBtn) {
+            yesBtn.addEventListener('click', function() {
+                console.log('Yes button clicked, recordId:', deleteContext.recordId);
+                if (deleteContext.recordId && deleteContext.button) {
+                    // Save button reference before hiding
+                    var recordId = deleteContext.recordId;
+                    var button = deleteContext.button;
+                    console.log('Saved button reference:', button);
+                    hideDeleteConfirm();
+                    // Now call delete with saved references
+                    deleteRecord(recordId, button);
+                } else {
+                    console.error('Missing recordId or button');
+                }
+            });
+        }
+        
+        if (noBtn) {
+            noBtn.addEventListener('click', function() {
+                console.log('No button clicked');
+                hideDeleteConfirm();
+            });
+        }
+        
+        // Close modal if clicking outside
+        if (modal) {
+            modal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    console.log('Modal background clicked');
+                    hideDeleteConfirm();
+                }
+            });
+        }
+        
+        // Setup delete buttons
+        console.log('Page loaded, setting up delete buttons');
+        var deleteButtons = document.querySelectorAll('.delete-record');
+        console.log('Found delete buttons:', deleteButtons.length);
+        
         deleteButtons.forEach(function(button) {
             button.addEventListener('click', function(e) {
                 e.preventDefault();
-                if (confirm('{% trans "Are you sure you want to delete this record?" %}')) {
-                    window.location.href = this.getAttribute('data-url');
-                }
+                e.stopPropagation();
+                
+                var recordId = this.getAttribute('data-record-id');
+                var componentName = this.closest('tr').querySelector('strong').textContent;
+                
+                console.log('Delete clicked for record ID:', recordId, 'Name:', componentName);
+                showDeleteConfirm(recordId, componentName, this);
             });
         });
     });
+    
+    function deleteRecord(recordId, button) {
+        console.log('=== DELETE FUNCTION STARTED ===');
+        console.log('RecordId:', recordId);
+        
+        var csrfToken = getCsrfToken();
+        console.log('CSRF Token found:', !!csrfToken);
+        
+        var url = '/employee/validity-record-delete/' + recordId;
+        var row = button.closest('tr');
+        
+        console.log('URL:', url);
+        console.log('Row found:', !!row);
+        
+        if (!row) {
+            console.error('Could not find record row');
+            alert('Error: Could not find record row');
+            return;
+        }
+        
+        button.disabled = true;
+        var originalHTML = button.innerHTML;
+        button.innerHTML = '<ion-icon name="hourglass-outline"></ion-icon> Deleting...';
+        
+        var formData = new FormData();
+        formData.append('csrfmiddlewaretoken', csrfToken);
+        
+        console.log('Sending POST request to:', url);
+        
+        fetch(url, {
+            method: 'POST',
+            body: formData,
+            credentials: 'same-origin'
+        })
+        .then(function(response) {
+            console.log('Response received, status:', response.status);
+            
+            if (!response.ok) {
+                throw new Error('HTTP ' + response.status);
+            }
+            
+            return response.json();
+        })
+        .then(function(data) {
+            console.log('Response data:', data);
+            
+            if (data.success) {
+                console.log('Delete successful! Removing row...');
+                
+                // Animate row removal
+                row.style.transition = 'opacity 0.3s ease-out, height 0.3s ease-out';
+                row.style.opacity = '0';
+                row.style.height = '0';
+                row.style.overflow = 'hidden';
+                
+                setTimeout(function() {
+                    row.remove();
+                    console.log('Row removed from DOM');
+                    
+                    // Check if there are more records
+                    var tbody = document.querySelector('tbody');
+                    var remaining = tbody ? tbody.querySelectorAll('tr').length : 0;
+                    console.log('Remaining rows:', remaining);
+                    
+                    if (remaining === 0) {
+                        console.log('No more records, reloading page...');
+                        setTimeout(function() {
+                            location.reload();
+                        }, 500);
+                    }
+                }, 300);
+            } else {
+                throw new Error(data.message || 'Unknown error');
+            }
+        })
+        .catch(function(error) {
+            console.error('Delete error:', error.message);
+            button.disabled = false;
+            button.innerHTML = originalHTML;
+            alert('Error deleting record: ' + error.message);
+        });
+    }
 </script>
 {% endblock content %}
