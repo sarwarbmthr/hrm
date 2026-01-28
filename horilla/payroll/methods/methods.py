@@ -70,24 +70,32 @@ def get_leaves(employee, start_date, end_date):
 
     if approved_leaves and approved_leaves.exists():
         for instance in approved_leaves:
-            if instance.leave_type_id.payment == "paid":
-                # if the taken leave is paid
-                # for the start date
-                all_the_paid_leave_taken_dates = instance.requested_dates()
-                paid_leave_dates = paid_leave_dates + [
-                    date
-                    for date in all_the_paid_leave_taken_dates
-                    if start_date <= date <= end_date
-                ]
+            leave_dates = [
+                d
+                for d in instance.requested_dates()
+                if start_date <= d <= end_date
+            ]
+
+            # ✅ Special handling for Sick Leave
+            if instance.leave_type_id.name.lower() == "sick leave":
+                unpaid = calculate_sick_leave_unpaid_days(employee, leave_dates)
+
+                unpaid_leave += unpaid
+                paid_leave += len(leave_dates) - unpaid
+
+                unpaid_leave_dates += leave_dates
+                paid_leave_dates += leave_dates
+
+            #  Existing logic remains for all other leave types
+            elif instance.leave_type_id.payment == "paid":
+                paid_leave_dates += leave_dates
+                paid_leave += len(leave_dates)
+
             else:
-                # if the taken leave is unpaid
-                # for the start date
-                all_unpaid_leave_taken_dates = instance.requested_dates()
-                unpaid_leave_dates = unpaid_leave_dates + [
-                    date
-                    for date in all_unpaid_leave_taken_dates
-                    if start_date <= date <= end_date
-                ]
+                unpaid_leave_dates += leave_dates
+                unpaid_leave += len(leave_dates)
+
+
 
     half_day_data = find_half_day_leaves()
 
@@ -594,3 +602,44 @@ def save_payslip(**kwargs):
     instance.save()
     instance.installment_ids.set(kwargs["installments"])
     return instance
+
+
+#additional for sick leave
+def calculate_sick_leave_unpaid_days(employee, leave_dates):
+    """
+    Calculate effective unpaid days for Sick Leave
+    Rules:
+    - First 15 days: fully paid
+    - Next 30 days: half paid (0.5 unpaid)
+    - Next 45 days: unpaid (1.0 unpaid)
+    """
+
+    from datetime import date
+
+    year = leave_dates[0].year
+
+    # get already approved sick leaves in this year (before current request)
+    previous_sick_leaves = employee.leaverequest_set.filter(
+        leave_type_id__name__iexact="Sick Leave",
+        status="approved",
+        start_date__year=year,
+    )
+
+    already_taken = 0
+    for leave in previous_sick_leaves:
+        already_taken += len(leave.requested_dates())
+
+    unpaid_days = 0.0
+    current_count = already_taken
+
+    for _ in leave_dates:
+        current_count += 1
+
+        if current_count <= 15:
+            continue  # fully paid
+        elif current_count <= 45:
+            unpaid_days += 0.5  # half paid
+        else:
+            unpaid_days += 1.0  # unpaid
+
+    return unpaid_days
