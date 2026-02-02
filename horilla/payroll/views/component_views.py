@@ -12,6 +12,7 @@ from itertools import groupby
 from urllib.parse import parse_qs
 
 import pandas as pd
+import logging
 from django.apps import apps
 from django.contrib import messages
 from django.db.models import Sum
@@ -754,47 +755,70 @@ def generate_payslip(request):
             end_date = form.cleaned_data["end_date"]
 
             group_name = form.cleaned_data["group_name"]
+            orig_start_date = start_date
+            failed_employees = []
+            total_selected = employees.count() if hasattr(employees, "count") else len(employees)
             for employee in employees:
-                contract = Contract.objects.filter(
-                    employee_id=employee, contract_status="active"
-                ).first()
-                if start_date < contract.contract_start_date:
-                    start_date = contract.contract_start_date
-                payslip = payroll_calculation(employee, start_date, end_date)
-                payslips.append(payslip)
-                json_data.append(payslip["json_data"])
+                try:
+                    contract = Contract.objects.filter(
+                        employee_id=employee, contract_status="active"
+                    ).first()
+                    # Use a per-employee start date so one employee's contract doesn't mutate the shared start_date
+                    emp_start = orig_start_date
+                    if contract and emp_start < contract.contract_start_date:
+                        emp_start = contract.contract_start_date
 
-                payslip["payslip"] = payslip
-                data = {}
-                data["employee"] = employee
-                data["group_name"] = group_name
-                data["start_date"] = payslip["start_date"]
-                data["end_date"] = payslip["end_date"]
-                data["status"] = "draft"
-                data["contract_wage"] = payslip["contract_wage"]
-                data["basic_pay"] = payslip["basic_pay"]
-                data["gross_pay"] = payslip["gross_pay"]
-                data["deduction"] = payslip["total_deductions"]
-                data["net_pay"] = payslip["net_pay"]
-                data["pay_data"] = json.loads(payslip["json_data"])
-                calculate_employer_contribution(data)
-                data["installments"] = payslip["installments"]
-                instance = save_payslip(**data)
-                instances.append(instance)
-                notify.send(
-                    request.user.employee_get,
-                    recipient=employee.employee_user_id,
-                    verb="Payslip has been generated for you.",
-                    verb_ar="تم إصدار كشف راتب لك.",
-                    verb_de="Gehaltsabrechnung wurde für Sie erstellt.",
-                    verb_es="Se ha generado la nómina para usted.",
-                    verb_fr="La fiche de paie a été générée pour vous.",
-                    redirect=reverse(
-                        "view-created-payslip", kwargs={"payslip_id": instance.id}
-                    ),
-                    icon="close",
+                    payslip = payroll_calculation(employee, emp_start, end_date)
+                    payslips.append(payslip)
+                    json_data.append(payslip["json_data"])
+
+                    payslip["payslip"] = payslip
+                    data = {}
+                    data["employee"] = employee
+                    data["group_name"] = group_name
+                    data["start_date"] = payslip["start_date"]
+                    data["end_date"] = payslip["end_date"]
+                    data["status"] = "draft"
+                    data["contract_wage"] = payslip["contract_wage"]
+                    data["basic_pay"] = payslip["basic_pay"]
+                    data["gross_pay"] = payslip["gross_pay"]
+                    data["deduction"] = payslip["total_deductions"]
+                    data["net_pay"] = payslip["net_pay"]
+                    data["pay_data"] = json.loads(payslip["json_data"])
+                    calculate_employer_contribution(data)
+                    data["installments"] = payslip["installments"]
+                    instance = save_payslip(**data)
+                    instances.append(instance)
+                    notify.send(
+                        request.user.employee_get,
+                        recipient=employee.employee_user_id,
+                        verb="Payslip has been generated for you.",
+                        verb_ar="تم إصدار كشف راتب لك.",
+                        verb_de="Gehaltsabrechnung wurde für Sie erstellt.",
+                        verb_es="Se ha generado la nómina para usted.",
+                        verb_fr="La fiche de paie a été générée pour vous.",
+                        redirect=reverse(
+                            "view-created-payslip", kwargs={"payslip_id": instance.id}
+                        ),
+                        icon="close",
+                    )
+                except Exception as exc:
+                    # Log and continue with other employees
+                    logging.exception(
+                        "Failed to generate payslip for employee %s: %s",
+                        getattr(employee, "id", employee),
+                        exc,
+                    )
+                    failed_employees.append(employee)
+                    continue
+
+            success_count = len(instances)
+            messages.success(request, f"{success_count} payslip(s) saved as draft")
+            if failed_employees:
+                messages.error(
+                    request,
+                    f"Failed to generate payslip for {len(failed_employees)} employee(s). Check logs for details.",
                 )
-            messages.success(request, f"{employees.count()} payslip saved as draft")
             return redirect(
                 f"/payroll/view-payslip?group_by=group_name&active_group={group_name}"
             )
