@@ -2290,3 +2290,4 @@ def payslip_detailed_export(request):
     wb.save(response)
 
     return response
+ 
