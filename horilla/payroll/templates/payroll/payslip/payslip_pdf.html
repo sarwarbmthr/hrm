@@ -173,32 +173,26 @@
           gap: 16px;
         }
       </style>
+      {% if html %}
+    <script>
+        function printDiv() {
+            const printContents = document.getElementById('printDiv').innerHTML;
+            const originalContents = document.body.innerHTML;
 
-      <script>
-          function printDiv() {
-              const printContents = document.getElementById('printDiv').innerHTML;
-              const originalContents = document.body.innerHTML;
+            document.body.innerHTML = printContents;
 
-              // Replace body content with print content
-              document.body.innerHTML = printContents;
+            window.onafterprint = () => {
+                window.location.href = document.referrer;
+            };
 
-              // Add event listener for after printing
-              window.onafterprint = () => {
-                  window.location.href = document.referrer; // Redirect to the previous page
-              };
+            window.print();
+            document.body.innerHTML = originalContents;
+        }
 
-              // Open print dialog
-              window.print();
+        window.onload = printDiv;
+    </script>
+  {% endif %}
 
-              // Restore original content
-              document.body.innerHTML = originalContents;
-
-            }
-
-            // Call printDiv on page load
-            window.onload = printDiv;
-
-      </script>
 
     </head>
     <body id="printDiv">
@@ -416,6 +410,10 @@
     <button type="button" onclick="printDiv()" id="" style="display:none;">
         print as PDF
     </button>
-  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
+
+    {% if html %}
+      <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+      <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js"></script>
+    {% endif %}
+
 </html>
